@@ -528,7 +528,6 @@ paths:
                 value:
                   code: 500
                   error: "Internal server error"
-
   /place_order:
     post:
       summary: Place an order
@@ -1142,6 +1141,414 @@ paths:
                 value:
                   code: xxx
                   error: "FAILED_SIGN_CHECK"
+  /withdraw:
+    post:
+      summary: Request withdrawal of tokens from exchange
+      description: |
+        Schedules withdrawal  tokens. Successful response means exchange validated request and now
+        put this request in processing queue. Actual result of withdrawal should be obtained over websocket stream.
+        User first need to sign request with signer that was bind for his trading account in exchange contract
+        The following typed message should we be signed (example). 
+        ```json
+        {
+          "domain": {
+            "name": "YourDomainName",
+            "version": "1",
+            "chainId": "YourChainId"
+          },
+          "types": {
+            "StarkNetDomain": [
+              {
+                "name": "name",
+                "type": "felt"
+              },
+              {
+                "name": "version",
+                "type": "felt"
+              },
+              {
+                "name": "chainId",
+                "type": "felt"
+              }
+            ],
+            "Withdraw": [
+              {
+                "name": "maker",
+                "type": "felt"
+              },
+              {
+                "name": "token",
+                "type": "felt"
+              },
+              {
+                "name": "amount",
+                "type": "u256"
+              },
+              {
+                "name": "salt",
+                "type": "felt"
+              },
+              {
+                "name": "gas_fee",
+                "type": "GasFee"
+              },
+              {
+                "name": "receiver",
+                "type": "felt"
+              },
+              {
+                "name": "exchange",
+                "type": "felt"
+              }
+            ],
+            "u256": [
+              {
+                "name": "low",
+                "type": "felt"
+              },
+              {
+                "name": "high",
+                "type": "felt"
+              }
+            ],
+            "GasFee": [
+              {
+                "name": "gas_per_action",
+                "type": "felt"
+              },
+              {
+                "name": "fee_token",
+                "type": "felt"
+              },
+              {
+                "name": "max_gas_price",
+                "type": "u256"
+              },
+              {
+                "name": "r0",
+                "type": "u256"
+              },
+              {
+                "name": "r1",
+                "type": "u256"
+              }
+            ]
+          },
+          "primaryType": "Withdraw",
+          "message": {
+            "maker": "0x1234",
+            "token": "0xUSDT_ADDR",
+            "amount": {
+              "low": "1000000000",
+              "high": "0"
+            },
+            "salt": "42",
+            "gas_fee": {
+              "gas_per_action": 150,
+              "fee_token": "0xSTRK_ADDR",
+              "max_gas_price": {
+                "low": "10000000000000",
+                "high": "0"
+              },
+              "r0": {
+                "low": "1000000000000000000",
+                "high": "0"
+              },
+              "r1": {
+                "low": "1000000000000000000",
+                "high": "0"
+              }
+            },
+            "receiver": "0x1234",
+            "exchange": "0x5678"
+          }
+        }
+        ```
+      security:
+        - AuthToken: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawRequest'
+            example:
+              receiver: "0x1234"
+              amount: "1000.0"
+              token: "USDT"
+              sign: [ "signature_part_1", "signature_part_2" ]
+              gas_fee:
+                fee_token: "STRK"
+                max_gas_price: "100.0"
+                conversion_rate: [ "1", "1" ]
+              nonce: "42"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    example: "0x12345"
+                    description: Hash of typed message
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+        '422':
+          description: Processing error. For exact code semantic please refer documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: xxx
+                  error: "FAILED_SIGN_CHECK"
+
+  /user/user_info:
+    get:
+      parameters:
+        - name: trading_account
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x12345"
+      security:
+        - AuthToken: [ ]
+      summary: Fetches the user information from the API.
+      description: Contains information about maker and taker fees and balances for tokens
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultUserInfo'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+  
+  /info/conversion_rate:
+    get:
+      security:
+        - AuthToken: [ ]
+      summary: Fetches suggested conversion rate between tokens if user decided to pay for gas via paymasters
+      description: |
+        If user want to use paymasters (pay for gas not in strk) he needs to specify conversion rate.
+        Exchange provides convenient method to query it. Client also can track it by taking mid bid/ask.
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "USDT"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultConversionRate'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+        '422':
+          description: Processing error. For exact code semantic please refer documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: xxx
+                  error: "some description"
+  /info/steps_specifications:
+    get:
+      security:
+        - AuthToken: [ ]
+      summary: Queries the steps specification from the API
+      description: |
+        Each user action that require onchain fingerprint consume some amount of gas steps.
+        We provide expected upper bound for this trades (they are constant within chain(mainnet/sepolia)).
+        In fact it might be less since more actions in rollup, less gas consumption.
+        Mainly we have the following actions:
+          1) offchain withdrawal
+          2) offchain increase nonce
+          3) ecosystem trade
+          4) router trade
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultStepsConfiguration'
+              example:
+                result:
+                  withdraw: 150
+                  swapRouter: 250
+                  swapEcosystem: 150
+                  nonce: 100
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+  /info/ticker_specifications:
+    get:
+      security:
+        - AuthToken: [ ]
+      summary: Queries the ticker specifications from the API
+      description: Each trading pair have specific rules about trading amount,ticks adn etc. This endpoints allow to query those rules
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultArrayTickerSpecification'
+              example:
+                result:
+                  - ticker:
+                      pair:
+                        base: "ETH"
+                        quote: "USDT"
+                      isEcosystemBook: true
+                    rawPriceIncrement: "100000"
+                    rawMinQuoteQty: "1000000000000"
+                    rawQuoteQtyIncrement: "10000000000"
+                  - ticker:
+                      pair:
+                        base: "ETH"
+                        quote: "USDT"
+                      isEcosystemBook: true
+                    rawPriceIncrement: "500000"
+                    rawMinQuoteQty: "5000000000000"
+                    rawQuoteQtyIncrement: "50000000000"
+
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+  /info/router_details:
+    get:
+      security:
+        - AuthToken: [ ]
+      summary: Queries the "layerakira" router specifications from the API
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultRouterSpecification'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
 
 components:
   securitySchemes:
@@ -1505,36 +1912,158 @@ components:
             type: string
           example: [ "0x12345", "0x12345" ]
 
-  examples:
-    SignDataIssued:
-      value:
-        result: "Sign data issued successfully."
-    InvalidInput:
-      value:
-        code: 400
-        error: "Invalid user or account parameter"
-    Unauthorized:
-      value:
-        code: 401
-        error: "Unauthorized access"
-    RateLimitExceeded:
-      value:
-        code: 429
-        error: "Rate limit exceeded. Suggested sleep time: 1000ms"
-    WrongUser:
-      value:
-        code: 500
-        error: "Wrong user"
-    WrongAccount:
-      value:
-        code: 500
-        error: "Wrong account"
-    ServerError:
-      value:
-        code: 500
-        error: "Internal server error"
-    JwtTokenIssued:
-      value:
-        result: "JWT token issued successfully."
+    WithdrawRequest:
+      type: object
+      properties:
+        receiver:
+          type: string
+          example: "0x1234567890ABCDEF"
+        amount:
+          type: string
+          example: "1000.0"
+        token:
+          type: string
+          example: "USDT"
+        sign:
+          type: array
+          items:
+            type: string
+          example: [ "signature_part_1", "signature_part_2" ]
+        gas_fee:
+          $ref: '#/components/schemas/GasFee'
+        nonce:
+          type: string
+          example: "42"
+
+    ResultUserInfo:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/UserInfo'
+    ResultConversionRate:
+      type: object
+      properties:
+        result:
+          type: array
+          items:
+            type: string
+          example: [ "1", "0.55" ]
+
+    ResultStepsConfiguration:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/StepsConfiguration'
+    ResultArrayTickerSpecification:
+      type: object
+      properties:
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/TickerSpecification'
+    ResultRouterSpecification:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/RouterSpecification'
+    UserInfo:
+      type: object
+      properties:
+        nonce:
+          type: integer
+          example: 42
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Balance'
+        fees:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserFee'
+    Balance:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "ERC20Token"
+        balance:
+          type: string
+          example: "156"
+        locked:
+          type: string
+          example: "15"
+    UserFee:
+      type: object
+      properties:
+        base:
+          type: string
+          example: "ETH"
+        quote:
+          type: string
+          example: "USDT"
+        fee:
+          type: array
+          items:
+            type: integer
+          example: [ 50, 75 ]
+    StepsConfiguration:
+      type: object
+      properties:
+        withdraw:
+          type: integer
+          example: 150
+        swapRouter:
+          type: integer
+          example: 250
+        swapEcosystem:
+          type: integer
+          example: 150
+        nonce:
+          type: integer
+          example: 100
+    TickerSpecification:
+      type: object
+      properties:
+        ticker:
+          $ref: '#/components/schemas/ExchangeTicker'
+        rawPriceIncrement:
+          type: string
+          example: "100000"
+        rawMinQuoteQty:
+          type: string
+          example: "1000000000000"
+        rawQuoteQtyIncrement:
+          type: string
+          example: "10000000000"
+
+    ExchangeTicker:
+      type: object
+      properties:
+        base:
+          type: string
+          example: "ETH"
+        quote:
+          type: string
+          example: "USDT"
+        isEcosystemBook:
+          type: boolean
+          example: true
+
+    RouterSpecification:
+      type: object
+      properties:
+        routerTakerPbips:
+          type: integer
+          example: 50
+        routerMakerPbips:
+          type: integer
+          example: 25
+        routerSigner:
+          type: string
+          example: "0x1234567890abcdef"
+        routerFeeRecipient:
+          type: string
+          example: "0xabcdef1234567890"
+
 #security:
 #  - AuthToken: []
