@@ -488,6 +488,661 @@ paths:
                     code: 500
                     error: "Internal server error"
 
+
+  /user/listen_key:
+    get:
+      summary: Obtain listen key for websocket
+      description: |
+        In order to use websockets user need to obtain listen key.
+        Expiration for listen key is 30 minutes. 
+        Subsequent invocation of get method will prolong listen key for another 30minutes
+      security:
+        - AuthToken: [ ]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultListenToken'
+              example:
+                value:
+                  result: "xjkfdjkdsfsdkf"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+
+  /place_order:
+    post:
+      summary: Place an order
+      description: |
+        Schedules place of passive order. Successful response means exchange validated request and now
+        put this request in processing queue. Actual result of place should be obtained over websocket stream.
+        User first need to sign place request with signer that was bind for his trading account in exchange contract
+        The following typed message should we be signed (example). 
+        ```json
+        {
+          "domain": {
+            "name": "LayerAkira Exchange",
+            "version": "0.0.1",
+            "chainId": "MAINNET|SEPOLIA"
+          },
+          "types": {
+            "StarkNetDomain": [
+              {
+                "name": "name",
+                "type": "felt"
+              },
+              {
+                "name": "version",
+                "type": "felt"
+              },
+              {
+                "name": "chainId",
+                "type": "felt"
+              }
+            ],
+            "Order": [
+              {
+                "name": "maker",
+                "type": "felt"
+              },
+              {
+                "name": "price",
+                "type": "u256"
+              },
+              {
+                "name": "qty",
+                "type": "Quantity"
+              },
+              {
+                "name": "base",
+                "type": "felt"
+              },
+              {
+                "name": "quote",
+                "type": "felt"
+              },
+              {
+                "name": "fee",
+                "type": "OrderFee"
+              },
+              {
+                "name": "constraints",
+                "type": "Constraints"
+              },
+              {
+                "name": "salt",
+                "type": "felt"
+              },
+              {
+                "name": "flags",
+                "type": "OrderFlags"
+              },
+              {
+                "name": "exchange",
+                "type": "felt"
+              },
+              {
+                "name": "source",
+                "type": "felt"
+              }
+            ],
+            "u256": [
+              {
+                "name": "low",
+                "type": "felt"
+              },
+              {
+                "name": "high",
+                "type": "felt"
+              }
+            ],
+            "FixedFee": [
+              {
+                "name": "recipient",
+                "type": "felt"
+              },
+              {
+                "name": "maker_pbips",
+                "type": "felt"
+              },
+              {
+                "name": "taker_pbips",
+                "type": "felt"
+              },
+              {
+                "name": "apply_to_receipt_amount",
+                "type": "bool"
+              }
+            ],
+            "Constraints": [
+              {
+                "name": "number_of_swaps_allowed",
+                "type": "felt"
+              },
+              {
+                "name": "duration_valid",
+                "type": "felt"
+              },
+              {
+                "name": "created_at",
+                "type": "felt"
+              },
+              {
+                "name": "stp",
+                "type": "felt"
+              },
+              {
+                "name": "nonce",
+                "type": "felt"
+              },
+              {
+                "name": "min_receive_amount",
+                "type": "u256"
+              },
+              {
+                "name": "router_signer",
+                "type": "felt"
+              }
+            ],
+            "Quantity": [
+              {
+                "name": "base_qty",
+                "type": "u256"
+              },
+              {
+                "name": "quote_qty",
+                "type": "u256"
+              },
+              {
+                "name": "base_asset",
+                "type": "u256"
+              }
+            ],
+            "GasFee": [
+              {
+                "name": "gas_per_action",
+                "type": "felt"
+              },
+              {
+                "name": "fee_token",
+                "type": "felt"
+              },
+              {
+                "name": "max_gas_price",
+                "type": "u256"
+              },
+              {
+                "name": "r0",
+                "type": "u256"
+              },
+              {
+                "name": "r1",
+                "type": "u256"
+              }
+            ],
+            "OrderFee": [
+              {
+                "name": "trade_fee",
+                "type": "FixedFee"
+              },
+              {
+                "name": "router_fee",
+                "type": "FixedFee"
+              },
+              {
+                "name": "gas_fee",
+                "type": "GasFee"
+              }
+            ],
+            "OrderFlags": [
+              {
+                "name": "full_fill_only",
+                "type": "bool"
+              },
+              {
+                "name": "best_level_only",
+                "type": "bool"
+              },
+              {
+                "name": "post_only",
+                "type": "bool"
+              },
+              {
+                "name": "is_sell_side",
+                "type": "bool"
+              },
+              {
+                "name": "is_market_order",
+                "type": "bool"
+              },
+              {
+                "name": "to_ecosystem_book",
+                "type": "bool"
+              },
+              {
+                "name": "external_funds",
+                "type": "bool"
+              }
+            ]
+          },
+          "primaryType": "Order",
+          "message": {
+            "maker": "0x1234567890ABCDEF",
+            "price": {
+              "low": "3000000000",
+              "high": "0"
+            },
+            "qty": {
+              "base_qty": {
+                "low": "10000000000000000000000",
+                "high": "0"
+              },
+              "quote_qty": {
+                "low": "200000000",
+                "high": "0"
+              },
+              "base_asset": {
+                "low": "1000000000000000000",
+                "high": "0"
+              }
+            },
+            "base": "0x1",
+            "quote": "0x2",
+            "fee": {
+              "gas_fee": {
+                "r0": {
+                  "low": "2000000000000000000",
+                  "high": "0"
+                },
+                "r1": {
+                  "low": "3000000000000000000",
+                  "high": "0"
+                },
+                "fee_token": "0x3",
+                "gas_per_action": "21000",
+                "max_gas_price": {
+                  "low": "C097CE7BC90715B34B9F1000000000",
+                  "high": "0"
+                }
+              },
+              "router_fee": {
+                "recipient": "0x1111111111111111",
+                "maker_pbips": "100",
+                "taker_pbips": "150",
+                "apply_to_receipt_amount": true
+              },
+              "trade_fee": {
+                "recipient": "0x2222222222222222",
+                "maker_pbips": "50",
+                "taker_pbips": "75",
+                "apply_to_receipt_amount": false
+              }
+            },
+            "constraints": {
+              "created_at": "1617171717",
+              "duration_valid": "3600",
+              "min_receive_amount": {
+                "low": "1000000000000000000000000",
+                "high": "0"
+              },
+              "nonce": "42",
+              "number_of_swaps_allowed": "10",
+              "router_signer": "0xABCDEF1234567890",
+              "stp": "3"
+            },
+            "flags": {
+              "best_level_only": true,
+              "external_funds": false,
+              "full_fill_only": true,
+              "is_market_order": false,
+              "is_sell_side": true,
+              "post_only": true,
+              "to_ecosystem_book": false
+            },
+            "exchange": "0x5",
+            "salt": "42",
+            "source": "LayerAkira"
+          }
+        }
+        ```
+      security:
+        - AuthToken: [ ]
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOrder'
+            examples:
+              placeOrderExample:
+                value:
+                  constraints:
+                    created_at: 1617171717
+                    duration_valid: 3600
+                    min_receive_amount: "1000000000000000000"
+                    nonce: 42
+                    number_of_swaps_allowed: 10
+                    router_signer: "0xABCDEF1234567890"
+                    stp: 3
+                  fee:
+                    gas_fee:
+                      conversion_rate: [ "2", "3" ]
+                      fee_token: "STRK"
+                      gas_per_action: 21000
+                      max_gas_price: "1000000000000000000"
+                    router_fee:
+                      apply_to_receipt_amount: true
+                      maker_pbips: 100
+                      recipient: "0x1111111111111111"
+                      taker_pbips: 150
+                    trade_fee:
+                      apply_to_receipt_amount: false
+                      maker_pbips: 50
+                      recipient: "0x2222222222222222"
+                      taker_pbips: 75
+                  flags:
+                    best_level_only: true
+                    external_funds: false
+                    full_fill_only: true
+                    is_market_order: false
+                    is_sell_side: true
+                    post_only: true
+                    to_ecosystem_book: false
+                  maker: "0x1234567890ABCDEF"
+                  price: "3000"
+                  qty:
+                    base_qty: "10000"
+                    quote_qty: "200"
+                  router_sign: [ "0", "0" ]
+                  salt: "42"
+                  sign: [ "1", "2" ]
+                  source: "LayerAkira"
+                  ticker: [ "ETH", "USDT" ]
+      responses:
+        '200':
+          description: Successful response, hash of the order (of the typed message)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOrder'
+              example:
+                value:
+                  result: "0x12345.."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+        '422':
+          description: Processing error. For exact code semantic please refer documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: xxx
+                  error: "FAILED_SIGN_CHECK"
+  /cancel_order:
+    post:
+      summary: Cancel a specific order
+      description: |
+        Schedules cancellation of passive order. Successful response means exchange validated request and now
+        put this request in processing queue. Actual result of cancellation should be obtained over websocket stream.
+        
+        User first need to sign cancelRequest with signer that was bind for his trading account in exchange contract
+        The following typed message should we be signed. 
+        ```json
+          {
+            "domain": {
+              "name": "LayerAkira Exchange",
+              "version": "0.0.1",
+              "chainId": "<MAINNET|SEPOLIA>"
+            },
+            "types": {
+              "StarkNetDomain": [
+                {
+                  "name": "name",
+                  "type": "felt"
+                },
+                {
+                  "name": "version",
+                  "type": "felt"
+                },
+                {
+                  "name": "chainId",
+                  "type": "felt"
+                }
+              ],
+              "CancelOrder": [
+                {
+                  "name": "maker",
+                  "type": "felt"
+                },
+                {
+                  "name": "order_hash",
+                  "type": "felt"
+                },
+                {
+                  "name": "salt",
+                  "type": "felt"
+                }
+              ]
+            },
+            "primaryType": "CancelOrder",
+            "message": {
+              "maker": "0x1",
+              "order_hash": "0x1",
+              "salt": "42"
+            }
+          }
+        ```
+      security:
+        - AuthToken: [ ]
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultCancel'
+              example:
+                value:
+                  result: "0x123456"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+        '422':
+          description: Processing error. For exact code semantic please refer documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: xxx
+                  error: "FAILED_SIGN_CHECK"
+  /cancel_all:
+    post:
+      security:
+        - AuthToken: [ ]
+      summary: Cancel all orders
+      description: |
+        Schedules cancellation of all passive orders under specified trading pair.
+        Successful response means exchange validated request and now put this request into processing queue.
+        Actual result of cancellation should be obtained over websocket stream.
+
+        User first need to sign cancelAllRequest with signer that was bind for his trading account in exchange contract
+        The following typed message should we be signed (example). 
+        ```json
+        {
+          "domain": {
+            "name": "LayerAkira Exchange",
+            "version": "0.0.1",
+            "chainId": "MAINNET|SEPOLIA"
+          },
+          "types": {
+            "StarkNetDomain": [
+              {
+                "name": "name",
+                "type": "felt"
+              },
+              {
+                "name": "version",
+                "type": "felt"
+              },
+              {
+                "name": "chainId",
+                "type": "felt"
+              }
+            ],
+            "Ticker": [
+              {
+                "name": "base",
+                "type": "felt"
+              },
+              {
+                "name": "quote",
+                "type": "felt"
+              },
+              {
+                "name": "to_ecosystem_book",
+                "type": "bool"
+              }
+            ],
+            "CancelAllOrders": [
+              {
+                "name": "maker",
+                "type": "felt"
+              },
+              {
+                "name": "salt",
+                "type": "felt"
+              },
+              {
+                "name": "ticker",
+                "type": "Ticker"
+              }
+            ]
+          },
+          "primaryType": "CancelAllOrders",
+          "message": {
+            "maker": "1",
+            "salt": "42",
+            "ticker": {
+              "base": "ETH",
+              "quote": "USDT",
+              "to_ecosystem_book": false
+            }
+          }
+        }
+        ```
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAllOrdersRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultCancelAll'
+              example:
+                value:
+                  result: "0x12345.."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+        '422':
+          description: Processing error. For exact code semantic please refer documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: xxx
+                  error: "FAILED_SIGN_CHECK"
+
 components:
   securitySchemes:
     AuthToken:
@@ -495,6 +1150,147 @@ components:
       in: header
       name: Authorization  # name of the header, query parameter or cookie
   schemas:
+    PlaceOrder:
+      type: object
+      properties:
+        constraints:
+          $ref: '#/components/schemas/Constraints'
+        fee:
+          $ref: '#/components/schemas/OrderFee'
+        flags:
+          $ref: '#/components/schemas/OrderFlags'
+        maker:
+          type: string
+          example: "0x1234567890ABCDEF"
+        price:
+          type: string
+          example: "3000"
+        qty:
+          $ref: '#/components/schemas/Quantity'
+        salt:
+          type: string
+          example: "42"
+        sign:
+          type: array
+          items:
+            type: string
+          example: [ "1", "2" ]
+        router_sign:
+          type: array
+          items:
+            type: string
+          example: [ "0", "0" ]
+        source:
+          type: string
+          example: "LayerAkira"
+        ticker:
+          type: array
+          items:
+            type: string
+          example: [ "ETH", "USDT" ]
+    Constraints:
+      type: object
+      properties:
+        created_at:
+          type: integer
+          example: 1617171717
+        duration_valid:
+          type: integer
+          example: 3600
+        min_receive_amount:
+          type: string
+          example: "1000000000000000000"
+        nonce:
+          type: integer
+          example: 42
+        number_of_swaps_allowed:
+          type: integer
+          example: 10
+        router_signer:
+          type: string
+          example: "0xABCDEF1234567890"
+        stp:
+          type: integer
+          example: 3
+    GasFee:
+      type: object
+      properties:
+        conversion_rate:
+          type: array
+          items:
+            type: string
+          example: [ "2", "3" ]
+        fee_token:
+          type: string
+          example: "STRK"
+        gas_per_action:
+          type: integer
+          example: 21000
+        max_gas_price:
+          type: string
+          example: "1000000000000000000"
+    FixedFee:
+      type: object
+      properties:
+        recipient:
+          type: string
+          example: "0x1111111111111111"
+        maker_pbips:
+          type: integer
+          example: 100
+        taker_pbips:
+          type: integer
+          example: 150
+        apply_to_receipt_amount:
+          type: boolean
+          example: true
+    OrderFee:
+      type: object
+      properties:
+        gas_fee:
+          $ref: '#/components/schemas/GasFee'
+        router_fee:
+          $ref: '#/components/schemas/FixedFee'
+        trade_fee:
+          $ref: '#/components/schemas/FixedFee'
+    OrderFlags:
+      type: object
+      properties:
+        best_level_only:
+          type: boolean
+          example: true
+        external_funds:
+          type: boolean
+          example: false
+        full_fill_only:
+          type: boolean
+          example: true
+        is_market_order:
+          type: boolean
+          example: false
+        is_sell_side:
+          type: boolean
+          example: true
+        post_only:
+          type: boolean
+          example: true
+        to_ecosystem_book:
+          type: boolean
+          example: false
+    Quantity:
+      type: object
+      properties:
+        base_qty:
+          type: string
+          example: "10000"
+        quote_qty:
+          type: string
+          example: "200"
+
+
+
+
+
     Result:
       type: object
       properties:
@@ -532,7 +1328,15 @@ components:
         result:
           type: string
           required: true
-          example: "some integer value"
+          example: "stringified big integer value"
+
+    ResultListenToken:
+      type: object
+      properties:
+        result:
+          type: string
+          required: true
+          example: "listen_token"
     TableLevel:
       type: object
       properties:
@@ -588,7 +1392,6 @@ components:
               type: string
               example: "AETH-AUSDC"
 
-
     BBOResponse:
       type: object
       properties:
@@ -609,6 +1412,99 @@ components:
             pair:
               type: string
               example: "AETH-AUSDC"
+
+
+    CancelOrderRequest:
+      type: object
+      properties:
+        maker:
+          type: string
+          example: "0x123456789abcdef"
+          required: true
+        order_hash:
+          type: string
+          example: "0xabcdef123456789"
+          required: true
+        ticker:
+          type: object
+          required: true
+          properties:
+            base:
+              type: string
+              example: "ETH"
+            quote:
+              type: string
+              example: "USDT"
+            to_ecosystem_book:
+              type: boolean
+              example: false
+        salt:
+          type: string
+          required: true
+          example: "random_salt_value"
+        sign:
+          type: array
+          required: true
+          items:
+            type: string
+          example: [ "0x12345", "0x12345" ]
+
+    ResultCancel:
+      type: object
+      properties:
+        result:
+          type: string
+          required: true
+          example: "0x..."
+          description: order hash of cancel request
+
+
+
+    ResultCancelAll:
+      type: object
+      properties:
+        result:
+          type: string
+          required: true
+          example: "0x..."
+          description: order hash of cancel all request
+
+    CancelAllOrdersRequest:
+      type: object
+      properties:
+        maker:
+          type: string
+          example: "0x123456789abcdef"
+          required: true
+        order_hash:
+          type: integer
+          example: 0
+          required: true
+          description: should be always 0
+        ticker:
+          type: object
+          required: true
+          properties:
+            base:
+              type: string
+              example: "ETH"
+            quote:
+              type: string
+              example: "USDT"
+            to_ecosystem_book:
+              type: boolean
+              example: true
+        salt:
+          type: string
+          example: "random_salt_value"
+          required: true
+        sign:
+          type: array
+          required: true
+          items:
+            type: string
+          example: [ "0x12345", "0x12345" ]
+
   examples:
     SignDataIssued:
       value:
