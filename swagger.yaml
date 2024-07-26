@@ -90,7 +90,40 @@ paths:
   /sign/auth:
     post:
       summary: Issue JWT
-      description: User would need to sign challenge received via request_sign_data that would be inserted into typed message. Refer to documentation chapter about auth.
+      description: |
+        Issues jwt token to be able to interact with rest exchange endpoints.
+        The following typed message should we be signed. 
+        Exchange expects either onchain signature or signature by the signer which binded to trader in layerakira smart contract.
+        ```json
+        {
+          "domain": {
+            "name": "LayerAkira Exchange",
+            "version": "0.0.1",
+            "chainId": "<MAINNET|SEPOLIA>"
+          },
+          "types": {
+            "StarkNetDomain": [
+              {"name": "name", "type": "felt"},
+              {"name": "version", "type": "felt"},
+              {"name": "chainId", "type": "felt"}
+            ],
+            "Message": [
+              {"name": "welcome", "type": "string"},
+              {"name": "to", "type": "string"},
+              {"name": "exchange", "type": "string"}
+            ]
+          },
+          "primaryType": "Message",
+          "message": {
+            "welcome": "Sign in to LayerAkira",
+            "to": "\tChallenge:",
+            "exchange": "place response challenge from /sign/request_sign_data"
+          }
+        }
+        ```
+
+      #      description: User would need to sign challenge received via request_sign_data that would be inserted into typed message. Refer to documentation chapter about auth.
+
       requestBody:
         required: true
         content:
@@ -106,7 +139,7 @@ paths:
                   items:
                     type: string
                   description: The stringified signature of the typed message wrt to snip revision 0.
-                  example: "['0x1234abcd'....'0x1234...',... '0x123..']"
+                  example: [ '0x1234abcd','0x1234...', '0x123..' ]
       responses:
         '200':
           description: Successful response
@@ -172,6 +205,289 @@ paths:
                     code: 500
                     error: "Failed to parse request"
 
+  /gas/price:
+    get:
+      summary: Query current gas price
+      description: |
+        The takers would pay for gas per swap that happens with their order, 
+        so trader need to specify max gas they are willing to spend per trade.
+        Usually user can use 25-50 percent premium over returned value to avoid frequently query this value from exchange.
+        The real gas price at time of chain settlement would reflect gas price of chain
+      security:
+        - AuthToken: [ ]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultQueryGas'
+              example:
+                value:
+                  result: "1234456788907878798"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+
+  /book/bbo:
+    get:
+      summary: Get best bid and best offer for particular trading pair
+      description: Retrieves best bid and best offer for particular trading pair
+      security:
+        - AuthToken: [ ]
+
+      parameters:
+        - in: query
+          name: base
+          required: true
+          schema:
+            type: string
+            example: "ETH"
+          description: Base symbol of trading pair
+        - in: query
+          name: quote
+          required: true
+          schema:
+            type: string
+            example: "USDC"
+          description: Quote symbol of trading pair
+        - in: query
+          name: to_ecosystem_book
+          required: true
+          schema:
+            type: integer
+            example: 0 or 1
+          description: Is book router or ecosystem
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BBOResponse'
+              examples:
+                BothDefined:
+                  value:
+                    result:
+                      to_ecosystem_book: false
+                      bid:
+                        price: "3170.6313"
+                        volume: "0.4380538"
+                        orders: 1
+                      ask:
+                        price: "3170.6538"
+                        volume: "3170.6538"
+                        orders: 1
+                      pair: "AETH-AUSDC"
+                OneDefined:
+                  value:
+                    result:
+                      to_ecosystem_book: false
+                      bid: { }
+                      ask:
+                        price: "3170.6538"
+                        volume: "3170.6538"
+                        orders: 1
+                      pair: "AETH-AUSDC"
+                EmptyBook:
+                  value:
+                    result:
+                      to_ecosystem_book: false
+                      bid: { }
+                      ask: { }
+                      pair: "AETH-AUSDC"
+        '404':
+          description: No book for specified trading pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BBOResponse'
+              example:
+                result:
+                  to_ecosystem_book: false
+                  bid: { }
+                  ask: { }
+                  pair: "AETH-AETH"
+        '422':
+          description: Wrong parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 422
+                  error: "Wrong parameters"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                Unauthorized:
+                  value:
+                    code: 401
+                    error: "Auth header required"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                RateLimitExceeded:
+                  value:
+                    code: 429
+                    error: "Rate limit exceeded. Suggested sleep time: 1000ms"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                ServerError:
+                  value:
+                    code: 500
+                    error: "Internal server error"
+
+  /book/snapshot:
+    get:
+      summary: Get book snapshot
+      description: |
+        Retrieves the book snapshot for particular trading pair and specified depth.
+        Client have 2 option to maintain book:
+          - periodic poll
+          - query snapshot, subscribe over websocket, apply updated incrementally. Msg_id is incremental 
+        
+        bids array already sorted from best bid to lowest bid
+        asks array already sorted from best offer to highest ask
+      security:
+        - AuthToken: [ ]
+
+      parameters:
+        - in: query
+          name: base
+          required: true
+          schema:
+            type: string
+            example: "ETH"
+          description: Base symbol of trading pair
+        - in: query
+          name: quote
+          required: true
+          schema:
+            type: string
+            example: "USDC"
+          description: Quote symbol of trading pair
+        - in: query
+          name: to_ecosystem_book
+          required: true
+          schema:
+            type: integer
+            example: 0 or 1
+          description: Is book router or ecosystem
+        - in: query
+          name: levels
+          required: false
+          schema:
+            type: integer
+            example: 0 or 1
+          description: How many levels of book should be retrieved, -1 refers to all
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotResponse'
+              example:
+                result:
+                  to_ecosystem_book: false
+                  levels:
+                    bids:
+                      [ [ "3170.6313", "0.4380538", 1 ], [ "3170.3141", "0.5518194", 1 ], [ "3169.7316", "0.9523885", 1 ], [ "3169.0528", "0.5152233", 1 ], [ "3168.7976", "0.585468", 1 ], [ "3168.411", "0.8911725", 1 ], [ "3168.3633", "0.6783952", 1 ] ]
+                    asks:
+                      [ [ "3170.6538", "0.7230962", 1 ], [ "3170.7946", "0.7023717", 1 ], [ "3172.329", "0.764084", 1 ], [ "3172.7461", "0.5906632", 1 ], [ "3172.9463", "0.3627099", 1 ], [ "3173.6037", "0.8015292", 1 ], [ "3173.8306", "0.956762", 1 ], [ "3174.0809", "0.7838471", 1 ], [ "3174.8152", "0.468063", 1 ] ]
+                    msg_id: "250"
+                  pair: "AETH-AUSDC"
+
+        '404':
+          description: No book for specified trading pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BBOResponse'
+              example:
+                result:
+                  to_ecosystem_book: false
+                  levels:
+                    asks: [ ]
+                    bids: [ ]
+                    msg_id: "0"
+                  pair: "AETH-AETH"
+        '422':
+          description: Wrong parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 422
+                  error: "Wrong parameters"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                Unauthorized:
+                  value:
+                    code: 401
+                    error: "Auth header required"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                RateLimitExceeded:
+                  value:
+                    code: 429
+                    error: "Rate limit exceeded. Suggested sleep time: 1000ms"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                ServerError:
+                  value:
+                    code: 500
+                    error: "Internal server error"
+
 components:
   securitySchemes:
     AuthToken:
@@ -210,6 +526,89 @@ components:
           type: string
           required: true
           example: "<jwt token>"
+    ResultQueryGas:
+      type: object
+      properties:
+        result:
+          type: string
+          required: true
+          example: "some integer value"
+    TableLevel:
+      type: object
+      properties:
+        price:
+          type: string
+          example: "3170.6313"
+          description: price in quote asset
+        volume:
+          type: string
+          example: "0.4380538"
+          description: qty in base asset
+        orders:
+          type: integer
+          example: 1
+          description: amount of orders on that level
+    SnapshotLevel:
+      type: array
+      example: [ "2800", "12.25", 1 ]
+      description: array of 3 element represent level <price, new volume at that level, new order at that level >
+    SnapshotResponse:
+      type: object
+      properties:
+        result:
+          type: object
+          properties:
+            to_ecosystem_book:
+              type: boolean
+              example: false
+            levels:
+              type: object
+              properties:
+                bids:
+                  oneOf:
+                    - $ref: '#/components/schemas/SnapshotLevel'
+                    - type: array
+                      description: Empty side
+                      example: [ ]
+                  required: true
+                  example: [ [ "3170.6313", "0.4380538", 1 ], [ "3170.3141", "0.5518194", 1 ] ]
+                asks:
+                  oneOf:
+                    - $ref: '#/components/schemas/SnapshotLevel'
+                    - type: array
+                      description: Empty side
+                  example: [ [ "3170.6538", "0.7230962", 1 ], [ "3170.7946", "0.7023717", 1 ] ]
+                  required: true
+                msg_id:
+                  required: true
+                  type: string
+                  description: Book id, can be used to correctly apply book snapshots over websockets
+                  example: "2555777"
+            pair:
+              type: string
+              example: "AETH-AUSDC"
+
+
+    BBOResponse:
+      type: object
+      properties:
+        result:
+          type: object
+          properties:
+            to_ecosystem_book:
+              type: boolean
+              example: false
+            bid:
+              oneOf:
+                - $ref: '#/components/schemas/TableLevel'
+                - type: object
+                  description: Empty side
+                  example: { }
+            ask:
+              $ref: '#/components/schemas/TableLevel'
+            pair:
+              type: string
+              example: "AETH-AUSDC"
   examples:
     SignDataIssued:
       value:
