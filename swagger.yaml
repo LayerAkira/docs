@@ -1365,7 +1365,399 @@ paths:
                 value:
                   code: 500
                   error: "Internal server error"
-  
+  /user/order:
+    get:
+      parameters:
+        - name: order_hash
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x12345"
+        - name: mode
+          in: query
+          required: true
+          schema:
+            type: integer
+            enum: [ 1, 2 ]
+            example: 1
+            description: 'Mode of the response. 1 for light mode, 2 for full mode'
+        - name: trading_account
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x12345"
+      security:
+        - AuthToken: [ ]
+      summary: Get order details
+      description: |
+        Fetches the order information by its hash. 
+        Note the following:
+          - Order flags return as an ordered list of bools.
+          - `paid_fee_as_maker`, `paid_fee_as_taker`, `reimbursement`, and `gas_paid` are returned in raw format with respect to decimals.
+          - `gas_paid` is already skewed to the token in which the user specified they would pay.
+          - `limit_price` is not null if the order was passive.
+          - To deduce what amount failed, use fields with the `failed_` prefix.
+          - `filled - failed` = actual matched amount.
+      responses:
+        '200':
+          description: 'Order details'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/OrderResponseLight'
+                  - $ref: '#/components/schemas/OrderResponseFull'
+              examples:
+                lightMode:
+                  value:
+                    result:
+                      maker: "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580"
+                      hash: "0x07cec852aa9cfb6ed7007f793088e6a3c92f400e6299acf78060f916cfc95c67"
+                      state:
+                        status: "CANCELLED"
+                        limit_price: "3282.7945"
+                        filled_base_amount: "0"
+                        filled_quote_amount: "0"
+                        cur_number_of_swaps: 0
+                        paid_fee_as_maker: "0"
+                        paid_fee_as_taker: "0"
+                        failed_base_amount: "0"
+                        failed_quote_amount: "0"
+                        failed_offchain: 0
+                        failed_onchain: 0
+                        reimbursement: "0"
+                        gas_paid: "0"
+                      qty:
+                        base_qty: "0.8175016"
+                        quote_qty: "0"
+                      price: "3282.7945"
+                      ticker:
+                        base: "AETH"
+                        quote: "AUSDC"
+                      flags: [ false, false, true, true, false, false, false ]
+                      stp: 0
+                      expiration_time: 1753631642
+                      source: "layerakira"
+                fullMode:
+                  value:
+                    result:
+                      maker: "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580"
+                      price: "3282.7945"
+                      qty:
+                        base_qty: "0.8175016"
+                        quote_qty: "0"
+                      constraints:
+                        created_at: 1722095642
+                        router_signer: "0x0000000000000000000000000000000000000000000000000000000000000000"
+                        number_of_swaps_allowed: 2
+                        nonce: 2
+                        stp: 0
+                        duration_valid: 31536000
+                        min_receive_amount: "0"
+                      flags: [ false,false,true,false,true,false,false ]
+                      ticker:
+                        base: "AETH"
+                        quote: "AUSDC"
+                      fee:
+                        trade_fee:
+                          recipient: "0x01e46d921194e1e59fb411c5446a286d3ddb707014729bea02700709efae7609"
+                          maker_pbips: 1000
+                          taker_pbips: 1000
+                          apply_to_receipt_amount: true
+                        router_fee:
+                          recipient: "0x0000000000000000000000000000000000000000000000000000000000000000"
+                          maker_pbips: 0
+                          taker_pbips: 0
+                          apply_to_receipt_amount: true
+                        gas_fee:
+                          gas_per_action: 250
+                          fee_token: "STRK"
+                          max_gas_price: "0.000108041180408098"
+                          conversion_rate: [ "0.000000000000000001", "0.000000000000000001" ]
+                      salt: "92442248"
+                      sign: [ "0", "0" ]
+                      router_sign: [ "0", "0" ]
+                      source: "layerakira"
+                      state:
+                        status: "CANCELLED"
+                        limit_price: "3282.7945"
+                        filled_base_amount: "0"
+                        filled_quote_amount: "0"
+                        cur_number_of_swaps: 0
+                        paid_fee_as_maker: 0
+                        paid_fee_as_taker: 0
+                        failed_base_amount: "0"
+                        failed_quote_amount: "0"
+                        failed_offchain: 0
+                        failed_onchain: 0
+                        reimbursement: 0
+                        gas_paid: 0
+                closedExample:
+                  value:
+                    result:
+                      maker: "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580"
+                      hash: "0x0134a81f3c756535a86495d6505c63495fe4129ca288351085a6b1c78977309e"
+                      state:
+                        status: "CLOSED"
+                        limit_price: null
+                        filled_base_amount: "0.0004466"
+                        filled_quote_amount: "1.240455"
+                        cur_number_of_swaps: 1
+                        paid_fee_as_maker: "0"
+                        paid_fee_as_taker: "4343"
+                        failed_base_amount: "0"
+                        failed_quote_amount: "0"
+                        failed_offchain: 0
+                        failed_onchain: 0
+                        reimbursement: "0"
+                        gas_paid: "8246850192324"
+                      qty:
+                        base_qty: "0"
+                        quote_qty: "3.037826"
+                      price: "2774.681"
+                      ticker:
+                        base: "AETH"
+                        quote: "AUSDC"
+                      flags: [ false, false, false, true, true, false, true ]
+                      stp: 0
+                      expiration_time: 1753633989
+                      source: "layerakira"
+                filledExample:
+                  value:
+                    result:
+                      maker: "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580"
+                      hash: "0x06640e32b7f4a9f1dc448da7373746dd1f94bfc48d6a0a9db4431e556a9eb14b"
+                      state:
+                        status: "FILLED"
+                        limit_price: "2800.9"
+                        filled_base_amount: "0.0017043"
+                        filled_quote_amount: "4.773573"
+                        cur_number_of_swaps: 0
+                        paid_fee_as_maker: "4776"
+                        paid_fee_as_taker: "0"
+                        failed_base_amount: "0"
+                        failed_quote_amount: "0"
+                        failed_offchain: 0
+                        failed_onchain: 0
+                        reimbursement: "0"
+                        gas_paid: "0"
+                      qty:
+                        base_qty: "0.0017043"
+                        quote_qty: "0"
+                      price: "2800.9"
+                      ticker:
+                        base: "AETH"
+                        quote: "AUSDC"
+                      flags: [ false, false, true, true, false, false, false ]
+                      stp: 0
+                      expiration_time: 1753634003
+                      source: "layerakira"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+
+        404:
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 404
+                  error: "Order <order> not found"
+
+        '422':
+          description: Processing error. For exact code semantic please refer documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: xxx
+                  error: "some field error"
+
+  /user/orders:
+    get:
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 5
+        - name: mode
+          in: query
+          required: true
+          schema:
+            type: integer
+            enum: [ 1, 2 ]
+            example: 2
+            description: 'Mode of the response. 1 for light mode, 2 for full mode'
+        - name: trading_account
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580"
+        - name: active
+          in: query
+          required: true
+          schema:
+            type: boolean
+            example: true
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1
+      security:
+        - AuthToken: [ ]
+      summary: Get list of orders
+      description: |
+        Fetches a list of orders for the specified trading account.
+        - `active` parameter indicates whether to return only active or inactive orders.
+        - Orders are sorted from recent to oldest by `created_at` field.
+      responses:
+        '200':
+          description: 'List of orders'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/OrderResponseLight'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/OrderResponseFull'
+              example:
+                result:
+                  [
+                    {
+                      "result": {
+                        "maker": "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580",
+                        "price": "3282.7945",
+                        "qty": {
+                          "base_qty": "0.8175016",
+                          "quote_qty": "0"
+                        },
+                        "constraints": {
+                          "created_at": 1722095642,
+                          "router_signer": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                          "number_of_swaps_allowed": 2,
+                          "nonce": 2,
+                          "stp": 0,
+                          "duration_valid": 31536000,
+                          "min_receive_amount": "0"
+                        },
+                        "flags": [ false, false, true, true, false, false, false ],
+                        "ticker": {
+                          "base": "AETH",
+                          "quote": "AUSDC"
+                        },
+                        "fee": {
+                          "trade_fee": {
+                            "recipient": "0x01e46d921194e1e59fb411c5446a286d3ddb707014729bea02700709efae7609",
+                            "maker_pbips": 1000,
+                            "taker_pbips": 1000,
+                            "apply_to_receipt_amount": true
+                          },
+                          "router_fee": {
+                            "recipient": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                            "maker_pbips": 0,
+                            "taker_pbips": 0,
+                            "apply_to_receipt_amount": true
+                          },
+                          "gas_fee": {
+                            "gas_per_action": 250,
+                            "fee_token": "STRK",
+                            "max_gas_price": "0.000108041180408098",
+                            "conversion_rate": [
+                              "0.000000000000000001",
+                              "0.000000000000000001"
+                            ]
+                          }
+                        },
+                        "salt": "92442248",
+                        "sign": [
+                          "0",
+                          "0"
+                        ],
+                        "router_sign": [
+                          "0",
+                          "0"
+                        ],
+                        "source": "layerakira",
+                        "state": {
+                          "status": "CANCELLED",
+                          "limit_price": "3282.7945",
+                          "filled_base_amount": "0",
+                          "filled_quote_amount": "0",
+                          "cur_number_of_swaps": 0,
+                          "paid_fee_as_maker": "0",
+                          "paid_fee_as_taker": "0",
+                          "failed_base_amount": "0",
+                          "failed_quote_amount": "0",
+                          "failed_offchain": 0,
+                          "failed_onchain": 0,
+                          "reimbursement": "0",
+                          "gas_paid": "0"
+                        }
+                      }
+                    }
+                  ]
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 401
+                  error: "Auth header required"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: 500
+                  error: "Internal server error"
+        '422':
+          description: Processing error. For exact code semantic please refer documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              example:
+                value:
+                  code: xxx
+                  error: "some field error"
   /info/conversion_rate:
     get:
       security:
@@ -1694,10 +2086,6 @@ components:
           type: string
           example: "200"
 
-
-
-
-
     Result:
       type: object
       properties:
@@ -1864,8 +2252,6 @@ components:
           required: true
           example: "0x..."
           description: order hash of cancel request
-
-
 
     ResultCancelAll:
       type: object
@@ -2064,6 +2450,238 @@ components:
         routerFeeRecipient:
           type: string
           example: "0xabcdef1234567890"
+
+
+
+    OrderResponseFull:
+      type: object
+      properties:
+        result:
+          type: object
+          properties:
+            maker:
+              type: string
+              description: 'The maker address'
+            price:
+              type: string
+              description: 'The order price'
+            qty:
+              type: object
+              properties:
+                base_qty:
+                  type: string
+                  description: 'Base quantity'
+                quote_qty:
+                  type: string
+                  description: 'Quote quantity'
+            constraints:
+              type: object
+              properties:
+                created_at:
+                  type: integer
+                  description: 'Creation timestamp'
+                router_signer:
+                  type: string
+                  description: 'Router signer address'
+                number_of_swaps_allowed:
+                  type: integer
+                  description: 'Number of swaps allowed'
+                nonce:
+                  type: integer
+                  description: 'Nonce'
+                stp:
+                  type: integer
+                  description: 'STP'
+                duration_valid:
+                  type: integer
+                  description: 'Duration valid'
+                min_receive_amount:
+                  type: string
+                  description: 'Minimum receive amount'
+            flags:
+              type: object
+              properties:
+                full_fill_only:
+                  type: boolean
+                best_level_only:
+                  type: boolean
+                post_only:
+                  type: boolean
+                to_ecosystem_book:
+                  type: boolean
+                is_sell_side:
+                  type: boolean
+                is_market_order:
+                  type: boolean
+                external_funds:
+                  type: boolean
+            ticker:
+              type: object
+              properties:
+                base:
+                  type: string
+                quote:
+                  type: string
+            fee:
+              type: object
+              properties:
+                trade_fee:
+                  type: object
+                  properties:
+                    recipient:
+                      type: string
+                    maker_pbips:
+                      type: integer
+                    taker_pbips:
+                      type: integer
+                    apply_to_receipt_amount:
+                      type: boolean
+                router_fee:
+                  type: object
+                  properties:
+                    recipient:
+                      type: string
+                    maker_pbips:
+                      type: integer
+                    taker_pbips:
+                      type: integer
+                    apply_to_receipt_amount:
+                      type: boolean
+                gas_fee:
+                  type: object
+                  properties:
+                    gas_per_action:
+                      type: integer
+                    fee_token:
+                      type: string
+                    max_gas_price:
+                      type: string
+                    conversion_rate:
+                      type: array
+                      items:
+                        type: string
+            salt:
+              type: string
+            sign:
+              type: array
+              items:
+                type: string
+            router_sign:
+              type: array
+              items:
+                type: string
+            source:
+              type: string
+            state:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/OrderStatus'
+                limit_price:
+                  type: string
+                filled_base_amount:
+                  type: string
+                filled_quote_amount:
+                  type: string
+                cur_number_of_swaps:
+                  type: integer
+                paid_fee_as_maker:
+                  type: string
+                paid_fee_as_taker:
+                  type: integer
+                failed_base_amount:
+                  type: string
+                failed_quote_amount:
+                  type: string
+                failed_offchain:
+                  type: integer
+                failed_onchain:
+                  type: integer
+                reimbursement:
+                  type: integer
+                gas_paid:
+                  type: integer
+    OrderResponseLight:
+      type: object
+      properties:
+        result:
+          type: object
+          properties:
+            maker:
+              type: string
+              description: 'The maker address'
+            hash:
+              type: string
+              description: 'The order hash'
+            state:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/OrderStatus'
+                limit_price:
+                  type: string
+                filled_base_amount:
+                  type: string
+                filled_quote_amount:
+                  type: string
+                cur_number_of_swaps:
+                  type: integer
+                paid_fee_as_maker:
+                  type: string
+                paid_fee_as_taker:
+                  type: string
+                failed_base_amount:
+                  type: string
+                failed_quote_amount:
+                  type: string
+                failed_offchain:
+                  type: integer
+                failed_onchain:
+                  type: integer
+                reimbursement:
+                  type: integer
+                gas_paid:
+                  type: string
+            qty:
+              type: object
+              properties:
+                base_qty:
+                  type: string
+                quote_qty:
+                  type: string
+            price:
+              type: string
+            ticker:
+              type: object
+              properties:
+                base:
+                  type: string
+                quote:
+                  type: string
+            flags:
+              type: array
+              items:
+                type: boolean
+            stp:
+              type: integer
+            expiration_time:
+              type: integer
+            source:
+              type: string
+    OrderStatus:
+      type: string
+      enum:
+        - ACC
+        - OPEN
+        - SCHEDULED_CANCEL
+        - CANCELLED
+        - PARTIALLY_FILLED
+        - FILLED
+        - CLOSED
+        - NOT_PROCESSED
+        - FAILED_ROLLUP
+        - REIMBURSE
+        - EXPIRED
 
 #security:
 #  - AuthToken: []
