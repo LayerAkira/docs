@@ -92,6 +92,7 @@ paths:
       summary: Issue JWT
       description: |
         Issues jwt token to be able to interact with rest exchange endpoints.
+        Note that user account should be deployed on chain.
         The following typed message should we be signed. 
         Exchange expects either onchain signature or signature by the signer which binded to trader in layerakira smart contract.
         ```json
@@ -2223,13 +2224,14 @@ components:
         ticker:
           type: object
           required: true
+          description: should be used as is
           properties:
             base:
               type: string
-              example: "ETH"
+              example: "0x0"
             quote:
               type: string
-              example: "USDT"
+              example: "0x0"
             to_ecosystem_book:
               type: boolean
               example: false
