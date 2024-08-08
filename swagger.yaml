@@ -5,7 +5,7 @@ info:
   version: 1.0.0
 
 servers:
-  - url: https://api.layerakira.xyz
+  - url: https://api-testnet.layerakira.xyz
 
 paths:
   /sign/request_sign_data:
@@ -1407,9 +1407,12 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/OrderResponseLight'
-                  - $ref: '#/components/schemas/OrderResponseFull'
+                type: object
+                properties:
+                  result:
+                    oneOf:
+                      - $ref: '#/components/schemas/OrderResponseLight'
+                      - $ref: '#/components/schemas/OrderResponseFull'
               examples:
                 lightMode:
                   value:
@@ -1633,6 +1636,12 @@ paths:
           schema:
             type: integer
             example: 1
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+
       security:
         - AuthToken: [ ]
       summary: Get list of orders
@@ -1646,89 +1655,100 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/OrderResponseLight'
-                  - type: array
-                    items:
-                      $ref: '#/components/schemas/OrderResponseFull'
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      data:
+                        oneOf:
+                          - type: array
+                            items:
+                              $ref: '#/components/schemas/OrderResponseLight'
+                          - type: array
+                            items:
+                              $ref: '#/components/schemas/OrderResponseFull'
+                      cursor:
+                        type: string
+                        nullable: true
               example:
                 result:
-                  [
-                    {
-                      "result": {
-                        "maker": "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580",
-                        "price": "3282.7945",
-                        "qty": {
-                          "base_qty": "0.8175016",
-                          "quote_qty": "0"
-                        },
-                        "constraints": {
-                          "created_at": 1722095642,
-                          "router_signer": "0x0000000000000000000000000000000000000000000000000000000000000000",
-                          "number_of_swaps_allowed": 2,
-                          "nonce": 2,
-                          "stp": 0,
-                          "duration_valid": 31536000,
-                          "min_receive_amount": "0"
-                        },
-                        "flags": [ false, false, true, true, false, false, false ],
-                        "ticker": {
-                          "base": "AETH",
-                          "quote": "AUSDC"
-                        },
-                        "fee": {
-                          "trade_fee": {
-                            "recipient": "0x01e46d921194e1e59fb411c5446a286d3ddb707014729bea02700709efae7609",
-                            "maker_pbips": 1000,
-                            "taker_pbips": 1000,
-                            "apply_to_receipt_amount": true
+                  data:
+                    [
+                      {
+                        "result": {
+                          "maker": "0x033e29bc9b537bae4e370559331e2bf35b434b566f41a64601b37f410f46a580",
+                          "price": "3282.7945",
+                          "qty": {
+                            "base_qty": "0.8175016",
+                            "quote_qty": "0"
                           },
-                          "router_fee": {
-                            "recipient": "0x0000000000000000000000000000000000000000000000000000000000000000",
-                            "maker_pbips": 0,
-                            "taker_pbips": 0,
-                            "apply_to_receipt_amount": true
+                          "constraints": {
+                            "created_at": 1722095642,
+                            "router_signer": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                            "number_of_swaps_allowed": 2,
+                            "nonce": 2,
+                            "stp": 0,
+                            "duration_valid": 31536000,
+                            "min_receive_amount": "0"
                           },
-                          "gas_fee": {
-                            "gas_per_action": 250,
-                            "fee_token": "STRK",
-                            "max_gas_price": "0.000108041180408098",
-                            "conversion_rate": [
-                              "0.000000000000000001",
-                              "0.000000000000000001"
-                            ]
+                          "flags": [ false, false, true, true, false, false, false ],
+                          "ticker": {
+                            "base": "AETH",
+                            "quote": "AUSDC"
+                          },
+                          "fee": {
+                            "trade_fee": {
+                              "recipient": "0x01e46d921194e1e59fb411c5446a286d3ddb707014729bea02700709efae7609",
+                              "maker_pbips": 1000,
+                              "taker_pbips": 1000,
+                              "apply_to_receipt_amount": true
+                            },
+                            "router_fee": {
+                              "recipient": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                              "maker_pbips": 0,
+                              "taker_pbips": 0,
+                              "apply_to_receipt_amount": true
+                            },
+                            "gas_fee": {
+                              "gas_per_action": 250,
+                              "fee_token": "STRK",
+                              "max_gas_price": "0.000108041180408098",
+                              "conversion_rate": [
+                                "0.000000000000000001",
+                                "0.000000000000000001"
+                              ]
+                            }
+                          },
+                          "salt": "92442248",
+                          "sign": [
+                            "0",
+                            "0"
+                          ],
+                          "router_sign": [
+                            "0",
+                            "0"
+                          ],
+                          "source": "layerakira",
+                          "state": {
+                            "status": "CANCELLED",
+                            "limit_price": "3282.7945",
+                            "filled_base_amount": "0",
+                            "filled_quote_amount": "0",
+                            "cur_number_of_swaps": 0,
+                            "paid_fee_as_maker": "0",
+                            "paid_fee_as_taker": "0",
+                            "failed_base_amount": "0",
+                            "failed_quote_amount": "0",
+                            "failed_offchain": 0,
+                            "failed_onchain": 0,
+                            "reimbursement": "0",
+                            "gas_paid": "0"
                           }
-                        },
-                        "salt": "92442248",
-                        "sign": [
-                          "0",
-                          "0"
-                        ],
-                        "router_sign": [
-                          "0",
-                          "0"
-                        ],
-                        "source": "layerakira",
-                        "state": {
-                          "status": "CANCELLED",
-                          "limit_price": "3282.7945",
-                          "filled_base_amount": "0",
-                          "filled_quote_amount": "0",
-                          "cur_number_of_swaps": 0,
-                          "paid_fee_as_maker": "0",
-                          "paid_fee_as_taker": "0",
-                          "failed_base_amount": "0",
-                          "failed_quote_amount": "0",
-                          "failed_offchain": 0,
-                          "failed_onchain": 0,
-                          "reimbursement": "0",
-                          "gas_paid": "0"
                         }
                       }
-                    }
-                  ]
+                    ]
+                  cursor: 'cursor'
         '401':
           description: Unauthorized
           content:
@@ -2458,218 +2478,212 @@ components:
     OrderResponseFull:
       type: object
       properties:
-        result:
+        maker:
+          type: string
+          description: 'The maker address'
+        price:
+          type: string
+          description: 'The order price'
+        qty:
           type: object
           properties:
-            maker:
+            base_qty:
               type: string
-              description: 'The maker address'
-            price:
+              description: 'Base quantity'
+            quote_qty:
               type: string
-              description: 'The order price'
-            qty:
-              type: object
-              properties:
-                base_qty:
-                  type: string
-                  description: 'Base quantity'
-                quote_qty:
-                  type: string
-                  description: 'Quote quantity'
-            constraints:
-              type: object
-              properties:
-                created_at:
-                  type: integer
-                  description: 'Creation timestamp'
-                router_signer:
-                  type: string
-                  description: 'Router signer address'
-                number_of_swaps_allowed:
-                  type: integer
-                  description: 'Number of swaps allowed'
-                nonce:
-                  type: integer
-                  description: 'Nonce'
-                stp:
-                  type: integer
-                  description: 'STP'
-                duration_valid:
-                  type: integer
-                  description: 'Duration valid'
-                min_receive_amount:
-                  type: string
-                  description: 'Minimum receive amount'
-            flags:
-              type: object
-              properties:
-                full_fill_only:
-                  type: boolean
-                best_level_only:
-                  type: boolean
-                post_only:
-                  type: boolean
-                to_ecosystem_book:
-                  type: boolean
-                is_sell_side:
-                  type: boolean
-                is_market_order:
-                  type: boolean
-                external_funds:
-                  type: boolean
-            ticker:
-              type: object
-              properties:
-                base:
-                  type: string
-                quote:
-                  type: string
-            fee:
-              type: object
-              properties:
-                trade_fee:
-                  type: object
-                  properties:
-                    recipient:
-                      type: string
-                    maker_pbips:
-                      type: integer
-                    taker_pbips:
-                      type: integer
-                    apply_to_receipt_amount:
-                      type: boolean
-                router_fee:
-                  type: object
-                  properties:
-                    recipient:
-                      type: string
-                    maker_pbips:
-                      type: integer
-                    taker_pbips:
-                      type: integer
-                    apply_to_receipt_amount:
-                      type: boolean
-                gas_fee:
-                  type: object
-                  properties:
-                    gas_per_action:
-                      type: integer
-                    fee_token:
-                      type: string
-                    max_gas_price:
-                      type: string
-                    conversion_rate:
-                      type: array
-                      items:
-                        type: string
-            salt:
+              description: 'Quote quantity'
+        constraints:
+          type: object
+          properties:
+            created_at:
+              type: integer
+              description: 'Creation timestamp'
+            router_signer:
               type: string
-            sign:
-              type: array
-              items:
-                type: string
-            router_sign:
-              type: array
-              items:
-                type: string
-            source:
+              description: 'Router signer address'
+            number_of_swaps_allowed:
+              type: integer
+              description: 'Number of swaps allowed'
+            nonce:
+              type: integer
+              description: 'Nonce'
+            stp:
+              type: integer
+              description: 'STP'
+            duration_valid:
+              type: integer
+              description: 'Duration valid'
+            min_receive_amount:
               type: string
-            state:
+              description: 'Minimum receive amount'
+        flags:
+          type: object
+          properties:
+            full_fill_only:
+              type: boolean
+            best_level_only:
+              type: boolean
+            post_only:
+              type: boolean
+            to_ecosystem_book:
+              type: boolean
+            is_sell_side:
+              type: boolean
+            is_market_order:
+              type: boolean
+            external_funds:
+              type: boolean
+        ticker:
+          type: object
+          properties:
+            base:
+              type: string
+            quote:
+              type: string
+        fee:
+          type: object
+          properties:
+            trade_fee:
               type: object
               properties:
-                status:
-                  $ref: '#/components/schemas/OrderStatus'
-                limit_price:
+                recipient:
                   type: string
-                filled_base_amount:
+                maker_pbips:
+                  type: integer
+                taker_pbips:
+                  type: integer
+                apply_to_receipt_amount:
+                  type: boolean
+            router_fee:
+              type: object
+              properties:
+                recipient:
                   type: string
-                filled_quote_amount:
+                maker_pbips:
+                  type: integer
+                taker_pbips:
+                  type: integer
+                apply_to_receipt_amount:
+                  type: boolean
+            gas_fee:
+              type: object
+              properties:
+                gas_per_action:
+                  type: integer
+                fee_token:
                   type: string
-                cur_number_of_swaps:
-                  type: integer
-                paid_fee_as_maker:
+                max_gas_price:
                   type: string
-                paid_fee_as_taker:
-                  type: integer
-                failed_base_amount:
-                  type: string
-                failed_quote_amount:
-                  type: string
-                failed_offchain:
-                  type: integer
-                failed_onchain:
-                  type: integer
-                reimbursement:
-                  type: integer
-                gas_paid:
-                  type: integer
+                conversion_rate:
+                  type: array
+                  items:
+                    type: string
+        salt:
+          type: string
+        sign:
+          type: array
+          items:
+            type: string
+        router_sign:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+        state:
+          type: object
+          properties:
+            status:
+              $ref: '#/components/schemas/OrderStatus'
+            limit_price:
+              type: string
+            filled_base_amount:
+              type: string
+            filled_quote_amount:
+              type: string
+            cur_number_of_swaps:
+              type: integer
+            paid_fee_as_maker:
+              type: string
+            paid_fee_as_taker:
+              type: integer
+            failed_base_amount:
+              type: string
+            failed_quote_amount:
+              type: string
+            failed_offchain:
+              type: integer
+            failed_onchain:
+              type: integer
+            reimbursement:
+              type: integer
+            gas_paid:
+              type: integer
     OrderResponseLight:
       type: object
       properties:
-        result:
+        maker:
+          type: string
+          description: 'The maker address'
+        hash:
+          type: string
+          description: 'The order hash'
+        state:
           type: object
           properties:
-            maker:
+            status:
+              $ref: '#/components/schemas/OrderStatus'
+            limit_price:
               type: string
-              description: 'The maker address'
-            hash:
+            filled_base_amount:
               type: string
-              description: 'The order hash'
-            state:
-              type: object
-              properties:
-                status:
-                  $ref: '#/components/schemas/OrderStatus'
-                limit_price:
-                  type: string
-                filled_base_amount:
-                  type: string
-                filled_quote_amount:
-                  type: string
-                cur_number_of_swaps:
-                  type: integer
-                paid_fee_as_maker:
-                  type: string
-                paid_fee_as_taker:
-                  type: string
-                failed_base_amount:
-                  type: string
-                failed_quote_amount:
-                  type: string
-                failed_offchain:
-                  type: integer
-                failed_onchain:
-                  type: integer
-                reimbursement:
-                  type: integer
-                gas_paid:
-                  type: string
-            qty:
-              type: object
-              properties:
-                base_qty:
-                  type: string
-                quote_qty:
-                  type: string
-            price:
+            filled_quote_amount:
               type: string
-            ticker:
-              type: object
-              properties:
-                base:
-                  type: string
-                quote:
-                  type: string
-            flags:
-              type: array
-              items:
-                type: boolean
-            stp:
+            cur_number_of_swaps:
               type: integer
-            expiration_time:
-              type: integer
-            source:
+            paid_fee_as_maker:
               type: string
+            paid_fee_as_taker:
+              type: string
+            failed_base_amount:
+              type: string
+            failed_quote_amount:
+              type: string
+            failed_offchain:
+              type: integer
+            failed_onchain:
+              type: integer
+            reimbursement:
+              type: integer
+            gas_paid:
+              type: string
+        qty:
+          type: object
+          properties:
+            base_qty:
+              type: string
+            quote_qty:
+              type: string
+        price:
+          type: string
+        ticker:
+          type: object
+          properties:
+            base:
+              type: string
+            quote:
+              type: string
+        flags:
+          type: array
+          items:
+            type: boolean
+        stp:
+          type: integer
+        expiration_time:
+          type: integer
+        source:
+          type: string
     OrderStatus:
       type: string
       enum:
