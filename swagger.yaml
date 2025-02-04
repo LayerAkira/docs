@@ -533,7 +533,7 @@ paths:
     post:
       summary: Place an order
       description: |
-        Schedules place of passive order. Successful response means exchange validated request and now
+        Schedules place of an order. Successful response means exchange validated request and now
         put this request in processing queue. Actual result of place should be obtained over websocket stream.
         User first need to sign place request with signer that was bind for his trading account in exchange contract
         The following typed message should we be signed (example). 
@@ -604,6 +604,10 @@ paths:
                 "name": "source",
                 "type": "felt"
               }
+              {
+                "name": "sign_scheme", 
+                "type": "felt"
+              },
             ],
             "u256": [
               {
@@ -820,10 +824,216 @@ paths:
             },
             "exchange": "0x5",
             "salt": "42",
-            "source": "LayerAkira"
+            "source": "LayerAkira",
+            "sign_scheme": "ecdsa curve"
           }
         }
         ```
+        
+        Notes:
+          1) grant_access_to_executor one lifetime interaction for client.
+          2) whenever snip-9 leveraged client need not to provide signature in 'sign' field.
+        
+        In case of snip-9 client would need to sign following snip9 depending on revision:
+        
+        Active revision (v1), example:
+        ```json        
+        {
+          "domain": {
+            "name": "Account.execute_from_outside",
+            "version": "2",
+            "chainId": "0x...",
+            "revision": "1"
+          },
+          "types": {
+            "StarknetDomain": [
+              {
+                "name": "name",
+                "type": "shortstring"
+              },
+              {
+                "name": "version",
+                "type": "shortstring"
+              },
+              {
+                "name": "chainId",
+                "type": "shortstring"
+              },
+              {
+                "name": "revision",
+                "type": "shortstring"
+              }
+            ],
+            "OutsideExecution": [
+              {
+                "name": "Caller",
+                "type": "ContractAddress"
+              },
+              {
+                "name": "Nonce",
+                "type": "felt"
+              },
+              {
+                "name": "Execute After",
+                "type": "u128"
+              },
+              {
+                "name": "Execute Before",
+                "type": "u128"
+              },
+              {
+                "name": "Calls",
+                "type": "Call*"
+              }
+            ],
+            "Call": [
+              {
+                "name": "To",
+                "type": "ContractAddress"
+              },
+              {
+                "name": "Selector",
+                "type": "selector"
+              },
+              {
+                "name": "Calldata",
+                "type": "felt*"
+              }
+            ]
+          },
+          "primaryType": "OutsideExecution",
+          "message": {
+            "Caller": "0xdeadbeef",
+            "Nonce": "0x1e240",
+            "Execute After": 1000,
+            "Execute Before": 2000,
+            "Calls": [
+              {
+                "To": "0x100",
+                "Selector": "0xabc",
+                "Calldata": [
+                  "0x1",
+                  "0x2",
+                  "0x3"
+                ]
+              },
+              {
+                "To": "0x200",
+                "Selector": "0xdef",
+                "Calldata": [
+                  "0x4",
+                  "0x5"
+                ]
+              }
+            ]
+          }
+        }
+        ```
+        
+        Legacy revision (v0), example:
+        ```json
+        {
+          "domain": {
+            "name": "Account.execute_from_outside",
+            "version": "1",
+            "chainId": "0x..."
+          },
+          "types": {
+            "StarkNetDomain": [
+              {
+                "name": "name",
+                "type": "felt"
+              },
+              {
+                "name": "version",
+                "type": "felt"
+              },
+              {
+                "name": "chainId",
+                "type": "felt"
+              }
+            ],
+            "OutsideExecution": [
+              {
+                "name": "caller",
+                "type": "felt"
+              },
+              {
+                "name": "nonce",
+                "type": "felt"
+              },
+              {
+                "name": "execute_after",
+                "type": "felt"
+              },
+              {
+                "name": "execute_before",
+                "type": "felt"
+              },
+              {
+                "name": "calls_len",
+                "type": "felt"
+              },
+              {
+                "name": "calls",
+                "type": "OutsideCall*"
+              }
+            ],
+            "OutsideCall": [
+              {
+                "name": "to",
+                "type": "felt"
+              },
+              {
+                "name": "selector",
+                "type": "felt"
+              },
+              {
+                "name": "calldata_len",
+                "type": "felt"
+              },
+              {
+                "name": "calldata",
+                "type": "felt*"
+              }
+            ]
+          },
+          "primaryType": "OutsideExecution",
+          "message": {
+            "caller": "0xdeadbeef",
+            "nonce": "0x1e240",
+            "execute_after": 1000,
+            "execute_before": 2000,
+            "calls_len": 2,
+            "calls": [
+              {
+                "to": "0x100",
+                "selector": "0xabc",
+                "calldata_len": 3,
+                "calldata": [
+                  "0x1",
+                  "0x2",
+                  "0x3"
+                ]
+              },
+              {
+                "to": "0x200",
+                "selector": "0xdef",
+                "calldata_len": 2,
+                "calldata": [
+                  "0x4",
+                  "0x5"
+                ]
+              }
+            ]
+          }
+        }          
+        ```        
+        where calls represent either (encoded according to contract abi):
+        1) grant_access_to_executor 
+        2) erc20.approve(executor smart contract, amount)
+        3) LayerAkiraExecutor.placeTakerOrder(order, router_sign)
+
       security:
         - AuthToken: [ ]
 
@@ -834,7 +1044,52 @@ paths:
             schema:
               $ref: '#/components/schemas/PlaceOrder'
             examples:
-              placeOrderExample:
+              placeOrderExampleNoSnip9ExternalFunds:
+                value:
+                  constraints:
+                    created_at: 1617171717
+                    duration_valid: 3600
+                    min_receive_amount: "1000000000000000000"
+                    nonce: 42
+                    number_of_swaps_allowed: 10
+                    router_signer: "0xABCDEF1234567890"
+                    stp: 3
+                  fee:
+                    gas_fee:
+                      conversion_rate: [ "2", "3" ]
+                      fee_token: "STRK"
+                      gas_per_action: 21000
+                      max_gas_price: "1000000000000000000"
+                    router_fee:
+                      apply_to_receipt_amount: true
+                      maker_pbips: 100
+                      recipient: "0x1111111111111111"
+                      taker_pbips: 150
+                    trade_fee:
+                      apply_to_receipt_amount: false
+                      maker_pbips: 50
+                      recipient: "0x2222222222222222"
+                      taker_pbips: 75
+                  flags:
+                    best_level_only: true
+                    external_funds: false
+                    full_fill_only: true
+                    is_market_order: false
+                    is_sell_side: true
+                    post_only: true
+                    to_ecosystem_book: false
+                  maker: "0x1234567890ABCDEF"
+                  price: "3000"
+                  qty:
+                    base_qty: "1"
+                    quote_qty: "0"
+                  router_sign: [ "0", "0" ]
+                  salt: "42"
+                  sign: [ "1", "2" ]
+                  source: "LayerAkira"
+                  sign_scheme: "account"
+                  ticker: [ "ETH", "USDT" ]
+              placeOrderExampleSnip9ExternalFunds:
                 value:
                   constraints:
                     created_at: 1617171717
@@ -875,9 +1130,29 @@ paths:
                     quote_qty: "200"
                   router_sign: [ "0", "0" ]
                   salt: "42"
-                  sign: [ "1", "2" ]
+                  sign: [ "0", "0" ]
                   source: "LayerAkira"
+                  sign_scheme: "direct"
                   ticker: [ "ETH", "USDT" ]
+                  snip9_call:
+                    caller: "<ExchangeRolluperAddress>"
+                    calls[0]:
+                      to: "<CoreAddress>"
+                      selector: "grant_access_to_executor"
+                      kwargs: {}
+                    calls[1]:
+                      to: "<ETH address>"
+                      selector: "approve"
+                      kwargs:
+                        recipient: "0xExecutorContract"
+                        amount: "1000000000000000000"
+                    execute_after: from_snip9_int
+                    execute_before: from_snip9_int
+                    nonce: "from_snip9_hex"
+                    signer_address: "0x1234567890ABCDEF"
+                    version: "from_snip_9"
+                    signature: ["0x...", "0x...", "0x.."]
+
       responses:
         '200':
           description: Successful response, hash of the order (of the typed message)
